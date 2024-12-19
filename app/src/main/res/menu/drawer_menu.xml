@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:id="@+id/grMessage">
+        <item
+            android:id="@+id/homeMessenger"
+            android:icon="@drawable/chat"
+            android:title="@string/home_messenger_title" />
+
+        <item
+            android:id="@+id/waitingMessage"
+            android:icon="@drawable/chat_wait"
+            android:title="@string/wait_message_title" />
+
+    </group>
+
+    <group android:id="@+id/grFriend">
+        <item
+            android:id="@+id/itFriend"
+            android:enabled="false"
+            android:title="@string/see_more">
+            <menu>
+                <item
+                    android:id="@+id/friendFragment"
+                    android:icon="@drawable/friend"
+                    android:title="@string/friend_title" />
+            </menu>
+        </item>
+    </group>
+
+    <group android:id="@+id/grSetting">
+        <item
+            android:id="@+id/settingsFragment"
+            android:icon="@drawable/setting"
+            android:title="@string/setting_title" />
+    </group>
+</menu>

@@ -1,0 +1,8 @@
+<resources>
+
+    <style name="Base.Theme.Messenger" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="materialButtonStyle">@style/CustomButton</item>
+    </style>
+
+    <style name="Theme.Messenger" parent="Base.Theme.Messenger" />
+</resources>

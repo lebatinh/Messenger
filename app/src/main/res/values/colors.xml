@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="text_color">#FF000000</color>
+    <color name="background">#FFFFFFFF</color>
+    <color name="bg_button_default">#2C2C2C</color>
+    <color name="bg_button_disable">#BDBDBD</color>
+    <color name="bg_button_click">#B3B3B3</color>
+    <color name="str_button_default">#000D50</color>
+    <color name="str_button_click">#2B499D</color>
+    <color name="loading">#80000000</color>
+    <color name="border_color_disable">#80FF0000</color>
+    <color name="border_color_enable">#8000FFF9</color>
+</resources>

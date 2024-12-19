@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="corner_50">
+        <item name="cornerSize">50%</item>
+        <item name="color">@color/text_color</item>
+    </style>
+
+    <style name="corner_20">
+        <item name="cornerSize">20%</item>
+        <item name="color">@color/text_color</item>
+    </style>
+</resources>

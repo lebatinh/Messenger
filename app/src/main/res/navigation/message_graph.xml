@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/messenge_graph"
+    app:startDestination="@id/homeMessenger">
+
+    <fragment
+        android:id="@+id/homeMessenger"
+        android:name="com.lebatinh.messenger.mess.fragment.HomeMessenger"
+        android:label="@string/home_messenger_title"
+        tools:layout="@layout/fragment_home_messenger" />
+    <fragment
+        android:id="@+id/friendFragment"
+        android:name="com.lebatinh.messenger.mess.fragment.FriendFragment"
+        android:label="@string/friend_title"
+        tools:layout="@layout/fragment_friend" />
+    <fragment
+        android:id="@+id/waitingMessage"
+        android:name="com.lebatinh.messenger.mess.fragment.WaitingMessage"
+        android:label="@string/wait_message_title"
+        tools:layout="@layout/fragment_waiting_message" />
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.lebatinh.messenger.mess.fragment.SettingsFragment"
+        android:label="@string/setting_title"
+        tools:layout="@layout/fragment_settings" />
+</navigation>

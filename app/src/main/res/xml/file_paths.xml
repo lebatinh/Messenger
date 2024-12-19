@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Chia sẻ thư mục cache của ứng dụng -->
+    <cache-path
+        name="cache"
+        path="." />
+
+    <!-- Chia sẻ thư mục external của ứng dụng -->
+    <external-path
+        name="external_storage"
+        path="." />
+
+    <!-- Chia sẻ thư mục pictures của hệ thống -->
+    <external-path
+        name="external_files"
+        path="Pictures/" />
+</paths>

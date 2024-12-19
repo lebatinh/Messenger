@@ -1,0 +1,52 @@
+<resources>
+    <string name="app_name">Tin nhắn</string>
+    <string name="login">Đăng nhập</string>
+    <string name="user">Người dùng</string>
+    <string name="gmail">Tài khoản Email</string>
+    <string name="password">Mật khẩu</string>
+    <string name="tvToForgotPassword"><font color="#FF0000"><u>Quên mật khẩu?</u></font></string>
+    <string name="tvToRegister">Chưa có tài khoản? <u>Đăng ký ngay</u></string>
+    <string name="toChangePass"><font color="#80FFFF"><u>Đổi mật khẩu</u></font></string>
+    <string name="hello">Xin chào,</string>
+    <string name="other_account">Tài khoản khác</string>
+    <string name="register">Đăng ký tài khoản</string>
+    <string name="terms_of_application"><font color="#FF0000"><u>Điều khoản ứng dụng</u></font></string>
+    <string name="back">Back</string>
+    <string name="agree_all_term">Tôi đồng ý với mọi điều khoản</string>
+    <string name="repass">Nhập lại mật khẩu</string>
+    <string name="changePass">Đổi mật khẩu</string>
+    <string name="otp">Lấy mã xác thực OTP</string>
+    <string name="enter_account_info">Nhập thông tin tài khoản</string>
+    <string name="forgotPass">Quên mật khẩu</string>
+    <string name="oldPass">Mật khẩu cũ</string>
+    <string name="nameUser">Tên người dùng</string>
+    <string name="_continue">Tiếp tục</string>
+    <string name="enter_otp">Nhập mã OTP</string>
+    <string name="enter_otp_here">Nhập mã OTP ở đây</string>
+    <string name="default_range_time_send_otp">180s</string>
+    <string name="send_later">Gửi lại OTP sau</string>
+    <string name="otp_fail"><font color="#FF0000">Mã OTP không chính xác</font></string>
+    <string name="account_info">Thông tin cá nhân</string>
+    <string name="full_name">Họ và tên</string>
+    <string name="phone_number">Số điện thoại</string>
+    <string name="birthday">Ngày/tháng/năm sinh</string>
+    <string name="default_birthday">01/01/2025</string>
+    <string name="confirm">Xác nhận</string>
+    <string name="register_successfully">Đăng ký tài khoản thành công!</string>
+    <string name="backToLogin">Quay về trang đăng nhập</string>
+    <string name="enter_new_pass">Nhập mật khẩu mới</string>
+    <string name="enter_new_password_successfully">Cập nhật mật khẩu thành công!</string>
+    <string name="enter_new_password">Nhập mật khẩu mới</string>
+    <string name="new_password">Mật khẩu mới</string>
+    <string name="renew_password">Nhập lại mật khẩu mới</string>
+    <string name="email_forgot_pass">Email thay đổi mật khẩu đã được gửi vào email của bạn.\n Hãy kiểm tra trong hòm thư (có thể có trong spam)</string>
+    <string name="phone_VN">+84</string>
+    <string name="remember_me">Ghi nhớ tôi</string>
+    <string name="home_messenger_title">Đoạn chat</string>
+    <string name="write_messenger">Write messenger</string>
+    <string name="friend_title">Bạn bè</string>
+    <string name="avatar">avatar</string>
+    <string name="wait_message_title">Tin nhắn chờ</string>
+    <string name="setting_title">Cài đặt</string>
+    <string name="see_more">Xem thêm</string>
+</resources>
