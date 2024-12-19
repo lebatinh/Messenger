@@ -1,57 +1,45 @@
 package com.lebatinh.messenger.mess
 
-import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
-import android.util.Log
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.bumptech.glide.Glide
-import com.cloudinary.android.MediaManager
 import com.google.android.material.snackbar.Snackbar
-import com.lebatinh.messenger.Key_Password.API_KEY
-import com.lebatinh.messenger.Key_Password.API_SECRET
-import com.lebatinh.messenger.Key_Password.CLOUD_NAME
 import com.lebatinh.messenger.R
 import com.lebatinh.messenger.animation.CustomBorderAnimation
 import com.lebatinh.messenger.databinding.ActivityMessageBinding
 import com.lebatinh.messenger.databinding.DrawerHeaderBinding
 import com.lebatinh.messenger.helper.FileHelper
-import com.lebatinh.messenger.helper.PermissionHelper
 import com.lebatinh.messenger.other.ReturnResult
-import com.lebatinh.messenger.user.UserRepository
 import com.lebatinh.messenger.user.UserViewModel
-import com.lebatinh.messenger.user.UserViewModelFactory
-import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 
+@AndroidEntryPoint
 class MessageActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMessageBinding
 
-    private lateinit var userViewModel: UserViewModel
+    private val userViewModel: UserViewModel by viewModels()
+    private val cloudinaryViewModel: CloudinaryViewModel by viewModels()
     private lateinit var headerView: DrawerHeaderBinding
 
-    private lateinit var permissionHelper: PermissionHelper
+    private var id: String? = null
     private var email: String? = null
-    private val REQUIRED_PERMISSIONS = arrayOf(
-        Manifest.permission.CAMERA,
-        Manifest.permission.READ_EXTERNAL_STORAGE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
-    )
 
     private var uri: Uri? = null
 
@@ -59,23 +47,6 @@ class MessageActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMessageBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        // Cấu hình Cloudinary
-        val config = mapOf(
-            "cloud_name" to CLOUD_NAME,
-            "api_key" to API_KEY,
-            "api_secret" to API_SECRET
-        )
-
-        // Khởi tạo Cloudinary
-        MediaManager.init(this, config)
-
-        permissionHelper = PermissionHelper(this)
-        // Kiểm tra quyền và yêu cầu quyền nếu chưa được cấp
-        if (!permissionHelper.arePermissionsGranted(REQUIRED_PERMISSIONS)) {
-            // Yêu cầu quyền nếu chưa được cấp
-            permissionHelper.requestPermissions(this, REQUIRED_PERMISSIONS)
-        }
 
         setSupportActionBar(binding.appBarMessage.toolbar)
 
@@ -86,16 +57,48 @@ class MessageActivity : AppCompatActivity() {
 
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.homeMessenger, R.id.waitingMessage, R.id.friendFragment, R.id.settingsFragment
+                R.id.homeMessenger,
+                R.id.waitingMessage,
+                R.id.communityFragment,
+                R.id.friendInvitationFragment,
+                R.id.settingsFragment
             ), drawerLayout
         )
 
+        navController.addOnDestinationChangedListener { _, des, _ ->
+            when (des.id) {
+                R.id.conversationFragment -> {
+                    // Hiển thị ảnh và cho phép kéo giãn
+                    binding.appBarMessage.appBarLayout.setExpanded(false, false)
+                    binding.appBarMessage.collapsingToolbarLayout.apply {
+                        isTitleEnabled = true
+                        binding.appBarMessage.appBarLayout.setLiftable(true)
+                    }
+                    binding.appBarMessage.cvAvatar.apply {
+                        visibility = View.VISIBLE
+                        animate().alpha(1F).setDuration(300).start()
+                    }
+                }
+
+                else -> {
+                    // Ẩn ảnh và khóa kéo giãn
+                    binding.appBarMessage.appBarLayout.setExpanded(false, false)
+                    binding.appBarMessage.collapsingToolbarLayout.apply {
+                        isTitleEnabled = false
+                        title = ""
+                        binding.appBarMessage.appBarLayout.setLiftable(false)
+                    }
+                    binding.appBarMessage.cvAvatar.apply {
+                        animate().alpha(0F).setDuration(300).withEndAction {
+                            visibility = View.GONE
+                        }.start()
+                    }
+                }
+            }
+        }
+
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
-
-        val repository = UserRepository()
-        userViewModel =
-            ViewModelProvider(this, UserViewModelFactory(repository))[UserViewModel::class.java]
 
         headerView = DrawerHeaderBinding.bind(navView.getHeaderView(0))
         CustomBorderAnimation().runBorderAnimation(
@@ -112,42 +115,53 @@ class MessageActivity : AppCompatActivity() {
             showAvatarDialog()
         }
 
+        // Quan sát URL ảnh sau khi upload
+        cloudinaryViewModel.imageUrl.observe(this) { url ->
+            url?.let {
+                Glide.with(this).load(it.first()).into(headerView.imgAvatar)
+                userViewModel.updateUserInfo(email!!, null, null, null, it.first())
+            }
+        }
+
         email = intent.getStringExtra("email")
-        if (email != null) {
-            userViewModel.getUserInfo(email!!)
+        id = intent.getStringExtra("userUID")
+        id.let {
+            userViewModel.getUserByUID(id!!)
+        }
+    }
 
-            userViewModel.returnResult.observe(this) { result ->
-                when (result) {
-                    ReturnResult.Loading -> {
-                        binding.frLoading.visibility = View.VISIBLE
-                    }
+    override fun onStart() {
+        super.onStart()
 
-                    is ReturnResult.Success -> {
-                        val user = result.data
-                        binding.frLoading.visibility = View.GONE
+        userViewModel.returnResult.observe(this) { result ->
+            when (result) {
+                ReturnResult.Loading -> {
+                    binding.frLoading.visibility = View.VISIBLE
+                }
 
-                        headerView.tvName.text = user.fullName
-                        headerView.tvAccount.text = user.email
-                        Glide.with(this@MessageActivity)
-                            .load(user.avatar)
-                            .into(headerView.imgAvatar)
+                is ReturnResult.Success -> {
+                    val user = result.data
+                    binding.frLoading.visibility = View.GONE
 
-                        userViewModel.resetReturnResult()
-                    }
+                    headerView.tvName.text = user.fullName
+                    headerView.tvAccount.text = user.email
+                    Glide.with(this@MessageActivity)
+                        .load(user.avatar)
+                        .into(headerView.imgAvatar)
 
-                    is ReturnResult.Error -> {
-                        binding.frLoading.visibility = View.GONE
-                        Snackbar.make(binding.root, "Có lỗi xảy ra!", Snackbar.LENGTH_SHORT).show()
-                        userViewModel.resetReturnResult()
-                    }
+                    userViewModel.resetReturnResult()
+                }
 
-                    null -> {
-                        binding.frLoading.visibility = View.GONE
-                    }
+                is ReturnResult.Error -> {
+                    binding.frLoading.visibility = View.GONE
+                    Snackbar.make(binding.root, "Có lỗi xảy ra!", Snackbar.LENGTH_SHORT).show()
+                    userViewModel.resetReturnResult()
+                }
+
+                null -> {
+                    binding.frLoading.visibility = View.GONE
                 }
             }
-        } else {
-            Snackbar.make(binding.root, "Có lỗi xảy ra!", Snackbar.LENGTH_SHORT).show()
         }
     }
 
@@ -159,39 +173,6 @@ class MessageActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.nav_host_fragment_container_messenger)
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
-    }
-
-    // Xử lý kết quả yêu cầu quyền
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        permissionHelper.handlePermissionsResult(
-            this,
-            requestCode,
-            permissions,
-            grantResults,
-            onPermissionsGranted = {},
-            onPermissionsDenied = {
-                Snackbar.make(
-                    binding.root,
-                    "Bạn cần cấp quyền để sử dụng tính năng này. Vui lòng cấp quyền trong cài đặt.",
-                    Snackbar.LENGTH_LONG
-                ).show()
-            },
-            onPermissionsRationaleNeeded = {
-                Snackbar.make(
-                    binding.root,
-                    "Ứng dụng cần quyền camera và lưu trữ để chụp ảnh hoặc chọn ảnh.",
-                    Snackbar.LENGTH_INDEFINITE
-                ).setAction("Cấp quyền") {
-                    permissionHelper.requestPermissions(this, REQUIRED_PERMISSIONS)
-                }.show()
-            }
-        )
     }
 
     private fun showAvatarDialog() {
@@ -214,19 +195,22 @@ class MessageActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    // Register activity result launchers
+    private fun openGallery() {
+        getImageFromGallery.launch("image/*")
+    }
+
     private val getImageFromGallery =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            uri?.let { uploadImageToCloudinary(it) }
+            uri?.let { FileHelper.startCrop(this, it, cropImageLauncher) }
         }
 
-    private val takePicture =
-        registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess: Boolean ->
-            if (isSuccess && uri != null) {
-                Log.d("success", "")
-                uploadImageToCloudinary(uri!!)
+    private val cropImageLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val croppedUri = FileHelper.handleCropResult(result.data)
+                croppedUri?.let { cloudinaryViewModel.uploadImage(listOf(it), this) }
             } else {
-                Log.d("fail", "")
+                Snackbar.make(binding.root, "Cắt ảnh thất bại.", Snackbar.LENGTH_LONG).show()
             }
         }
 
@@ -235,11 +219,10 @@ class MessageActivity : AppCompatActivity() {
 
         // Tạo URI từ FileProvider
         val uri = FileProvider.getUriForFile(this, "com.lebatinh.messenger", file)
-        Log.d("CameraURI", "Uri: $uri")
 
         // Cấp quyền tạm thời cho URI
         grantUriPermission(
-            packageManager.toString(),
+            packageName,
             uri,
             Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
         )
@@ -251,28 +234,12 @@ class MessageActivity : AppCompatActivity() {
         takePicture.launch(uri)
     }
 
-    private fun openGallery() {
-        getImageFromGallery.launch("image/*")
-    }
-
-    private fun uploadImageToCloudinary(uri: Uri) {
-        // Sử dụng FileHelper để upload ảnh
-        lifecycleScope.launch {
-            val imageUrl = FileHelper.uploadImage(this@MessageActivity, uri)
-            if (!email.isNullOrEmpty()) {
-                imageUrl?.let {
-                    Glide.with(this@MessageActivity)
-                        .load(imageUrl)
-                        .into(headerView.imgAvatar)
-                    userViewModel.updateUserInfo(email!!, null, null, null, imageUrl)
-                } ?: run {
-                    Snackbar.make(
-                        binding.root,
-                        "Ảnh không hợp lệ.",
-                        Snackbar.LENGTH_LONG
-                    ).show()
-                }
+    private val takePicture =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess: Boolean ->
+            if (isSuccess && uri != null) {
+                FileHelper.startCrop(this, uri!!, cropImageLauncher)
+            } else {
+                Snackbar.make(binding.root, "Chụp ảnh thất bại.", Snackbar.LENGTH_LONG).show()
             }
         }
-    }
 }

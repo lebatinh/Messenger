@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="background">#FF000000</color>
     <color name="text_color">#FFFFFFFF</color>
+    <color name="text_des">#313131</color>
+    <color name="background">#FF000000</color>
     <color name="bg_button_default">#F5F5F5</color>
     <color name="bg_button_disable">#BDBDBD</color>
     <color name="bg_button_click">#808080</color>
@@ -10,4 +11,7 @@
     <color name="loading">#80000000</color>
     <color name="border_color_disable">#80400000</color>
     <color name="border_color_enable">#8000403F</color>
+    <color name="background_color_message">#800049FF</color>
+    <color name="transparent">#00000000</color>
+    <color name="transparent_40">#66000000</color>
 </resources>

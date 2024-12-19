@@ -5,31 +5,27 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionInflater
 import com.google.android.material.snackbar.Snackbar
-import com.lebatinh.messenger.account.otp.OTPRepository
 import com.lebatinh.messenger.account.otp.OTPViewModel
-import com.lebatinh.messenger.account.otp.OTPViewModelFactory
 import com.lebatinh.messenger.databinding.FragmentChangePasswordBinding
-import com.lebatinh.messenger.helper.GmailHelper
 import com.lebatinh.messenger.other.ReturnResult
-import com.lebatinh.messenger.user.UserRepository
 import com.lebatinh.messenger.user.UserViewModel
-import com.lebatinh.messenger.user.UserViewModelFactory
 import com.lebatinh.messenger.user.Validator
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class ChangePasswordFragment : Fragment() {
 
     private var _binding: FragmentChangePasswordBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var userViewModel: UserViewModel
-    private lateinit var otpViewModel: OTPViewModel
+    private val userViewModel: UserViewModel by viewModels()
+    private val otpViewModel: OTPViewModel by viewModels()
     private lateinit var validator: Validator
-    private lateinit var gmailHelper: GmailHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,15 +34,6 @@ class ChangePasswordFragment : Fragment() {
             .inflateTransition(android.R.transition.move)
         sharedElementReturnTransition = TransitionInflater.from(requireContext())
             .inflateTransition(android.R.transition.move)
-
-        val repositoryUser = UserRepository()
-        userViewModel =
-            ViewModelProvider(this, UserViewModelFactory(repositoryUser))[UserViewModel::class.java]
-
-        gmailHelper = GmailHelper()
-        val repositoryOTP = OTPRepository()
-        otpViewModel =
-            ViewModelProvider(this, OTPViewModelFactory(repositoryOTP))[OTPViewModel::class.java]
 
         validator = Validator()
     }
@@ -85,9 +72,8 @@ class ChangePasswordFragment : Fragment() {
         return root
     }
 
-    override fun onResume() {
-        super.onResume()
-
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         userViewModel.returnResult.observe(viewLifecycleOwner) { resultUser ->
             when (resultUser) {
                 is ReturnResult.Loading -> {

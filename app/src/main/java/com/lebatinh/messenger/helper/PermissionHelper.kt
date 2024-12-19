@@ -5,8 +5,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import javax.inject.Inject
 
-class PermissionHelper(private val context: Context) {
+class PermissionHelper @Inject constructor(private val context: Context) {
+    companion object {
+        private const val REQUEST_CODE_PERMISSIONS = 1001
+    }
 
     // Kiểm tra tất cả quyền cần thiết đã được cấp hay chưa
     fun arePermissionsGranted(requiredPermissions: Array<String>): Boolean {
@@ -16,11 +20,18 @@ class PermissionHelper(private val context: Context) {
     }
 
     // Yêu cầu quyền từ người dùng
-    fun requestPermissions(activity: Activity, requiredPermissions: Array<String>) {
-        ActivityCompat.requestPermissions(
-            activity, requiredPermissions,
-            REQUEST_CODE_PERMISSIONS
-        )
+    fun requestPermissions(activity: Activity, permissions: Array<String>) {
+        val permissionsToRequest = permissions.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                activity,
+                permissionsToRequest,
+                REQUEST_CODE_PERMISSIONS
+            )
+        }
     }
 
     // Xử lý kết quả yêu cầu quyền
@@ -43,28 +54,16 @@ class PermissionHelper(private val context: Context) {
                     grantResults[index] != PackageManager.PERMISSION_GRANTED
                 }
 
-                if (deniedPermissions.isEmpty()) {
-                    // Quyền đã bị từ chối vĩnh viễn
-                    onPermissionsDenied()
-                } else {
-                    // Quyền bị từ chối nhưng chưa chọn "Don't ask again", yêu cầu giải thích và yêu cầu quyền lại
-                    val shouldShowRationale = deniedPermissions.any { permission ->
-                        ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
-                    }
+                val shouldShowRationale = deniedPermissions.any { permission ->
+                    ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+                }
 
-                    if (shouldShowRationale) {
-                        // Hiển thị lý do yêu cầu quyền
-                        onPermissionsRationaleNeeded()
-                    } else {
-                        // Quyền đã bị từ chối vĩnh viễn, yêu cầu cấp quyền từ cài đặt
-                        onPermissionsDenied()
-                    }
+                if (shouldShowRationale) {
+                    onPermissionsRationaleNeeded()
+                } else {
+                    onPermissionsDenied()
                 }
             }
         }
-    }
-
-    companion object {
-        private const val REQUEST_CODE_PERMISSIONS = 1001
     }
 }

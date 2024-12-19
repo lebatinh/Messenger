@@ -4,13 +4,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.lebatinh.messenger.other.ReturnResult
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
-class UserViewModel(private val repository: UserRepository) : ViewModel() {
+@HiltViewModel
+class UserViewModel @Inject constructor(private val userUseCase: UserUseCase) : ViewModel() {
 
     private val _returnResult = MutableLiveData<ReturnResult<User>?>()
     val returnResult: LiveData<ReturnResult<User>?> get() = _returnResult
@@ -18,79 +18,40 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
     private val _unitResult = MutableLiveData<ReturnResult<Unit>?>()
     val unitResult: LiveData<ReturnResult<Unit>?> get() = _unitResult
 
-    fun register(email: String, password: String) {
-        if (email.isEmpty() || password.isEmpty()) {
-            _returnResult.postValue(ReturnResult.Error("Email hoặc mật khẩu không được để trống"))
-            return
-        }
+    private val _listResult = MutableLiveData<ReturnResult<List<User>>?>()
+    val listResult: LiveData<ReturnResult<List<User>>?> get() = _listResult
 
+    private val _selectedItems = MutableLiveData<MutableList<User>?>()
+    val selectedItems: LiveData<MutableList<User>?> = _selectedItems
+
+    fun register(email: String, password: String) {
         viewModelScope.launch {
             _returnResult.postValue(ReturnResult.Loading)
-            try {
-                val authResult = FirebaseAuth.getInstance()
-                    .createUserWithEmailAndPassword(email, password).await()
-                val userUID = authResult.user?.uid
-                if (userUID != null) {
-                    val newUser = User(userUID = userUID, email = email)
-                    val result = repository.register(newUser)
-                    _returnResult.postValue(result)
-                } else {
-                    _returnResult.postValue(ReturnResult.Error("Có lỗi xảy ra! Hãy thử lại sau."))
-                }
-            } catch (e: Exception) {
-                if (e is FirebaseAuthUserCollisionException) {
-                    _returnResult.postValue(ReturnResult.Error("Email đã được đăng ký."))
-                } else {
-                    _returnResult.postValue(ReturnResult.Error("Có lỗi xảy ra! Hãy thử lại sau."))
-                }
-            }
+            val result = userUseCase.register(email, password)
+            _returnResult.postValue(result)
         }
     }
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _returnResult.postValue(ReturnResult.Loading)
-            val result = repository.login(email, password)
+            val result = userUseCase.login(email, password)
             _returnResult.postValue(result)
         }
     }
 
     fun forgot(email: String, name: String) {
         viewModelScope.launch {
-            _returnResult.postValue(ReturnResult.Loading)
-            val result = repository.checkIfUserExists(email, name)
-            if (result is ReturnResult.Success && result.data) {
-                _returnResult.postValue(ReturnResult.Success(User(email = email)))
-            } else {
-                _returnResult.postValue(
-                    ReturnResult.Error("Thông tin tài khoản hoặc tên không chính xác.")
-                )
-            }
-        }
-    }
-
-    fun changePassword(newPassword: String) {
-        if (newPassword.isEmpty()) {
-            _unitResult.postValue(ReturnResult.Error("Mật khẩu không được để trống."))
-            return
-        }
-
-        viewModelScope.launch {
             _unitResult.postValue(ReturnResult.Loading)
-            val result = repository.changePassword(newPassword)
+            val result = userUseCase.forgotPass(email, name)
             _unitResult.postValue(result)
         }
     }
 
-    fun sendResetPasswordEmail(email: String) {
-        if (email.isEmpty()) {
-            _unitResult.postValue(ReturnResult.Error("Email không được để trống."))
-            return
-        }
-        _unitResult.postValue(ReturnResult.Loading)
-
+    fun changePassword(newPassword: String) {
         viewModelScope.launch {
-            val result = repository.sendResetPasswordEmail(email)
+            _unitResult.postValue(ReturnResult.Loading)
+            val result = userUseCase.changePass(newPassword)
             _unitResult.postValue(result)
         }
     }
@@ -102,33 +63,47 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
         birthday: String?,
         avatar: String?
     ) {
-        if (email.isEmpty()) {
-            _unitResult.postValue(ReturnResult.Error("Có lỗi xảy ra!"))
-            return
-        }
-        _unitResult.postValue(ReturnResult.Loading)
-
         viewModelScope.launch {
-            val result = repository.updateUserInfo(email, fullName, phoneNumber, birthday, avatar)
+            _unitResult.postValue(ReturnResult.Loading)
+            val result = userUseCase.updateUserInfo(email, fullName, phoneNumber, birthday, avatar)
             _unitResult.postValue(result)
         }
     }
 
-    fun getUserInfo(email: String) {
-        if (email.isEmpty()) {
-            _returnResult.postValue(ReturnResult.Error("Có lỗi xảy ra!"))
-            return
-        }
-        _returnResult.postValue(ReturnResult.Loading)
-
+    fun searchUsers(query: String, currentUserUID: String) {
         viewModelScope.launch {
-            val result = repository.getUserInfo(email)
+            _listResult.postValue(ReturnResult.Loading)
+            val result = userUseCase.searchUsers(query, currentUserUID)
+            _listResult.postValue(result)
+        }
+    }
+
+    fun getUserByUID(userUID: String) {
+        viewModelScope.launch {
+            _returnResult.postValue(ReturnResult.Loading)
+            val result = userUseCase.getUserByUID(userUID)
             _returnResult.postValue(result)
         }
+    }
+
+    fun toggleSelection(user: User) {
+        val currentList = _selectedItems.value ?: mutableListOf()
+        if (currentList.contains(user)) {
+            currentList.remove(user)
+        } else {
+            currentList.add(user)
+        }
+        _selectedItems.value = currentList
+    }
+
+    suspend fun getInfoUserByUID(userUID: String): User? {
+        return userUseCase.getInfoUserByUID(userUID)
     }
 
     fun resetReturnResult() {
         _returnResult.postValue(null)
         _unitResult.postValue(null)
+        _listResult.postValue(null)
+        _selectedItems.postValue(null)
     }
 }

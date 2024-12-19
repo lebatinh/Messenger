@@ -1,26 +1,27 @@
 package com.lebatinh.messenger.helper
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.activity.result.ActivityResultLauncher
 import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
+import com.lebatinh.messenger.Key_Password.MAX_IMAGE_SIZE
+import com.lebatinh.messenger.Key_Password.MAX_VIDEO_SIZE
+import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class FileHelper {
 
     companion object {
-
-        /**
-         * Kích thước tối đa cho ảnh và video (bytes)
-         */
-        private const val MAX_IMAGE_SIZE = 5 * 1024 * 1024  // 5MB
-        private const val MAX_VIDEO_SIZE = 20 * 1024 * 1024 // 20MB
-
         /**
          * Kiểm tra kích thước file có hợp lệ hay không
          */
@@ -84,6 +85,34 @@ class FileHelper {
                     null
                 }
             }
+        }
+
+        /**
+         * Cắt ảnh
+         */
+        fun startCrop(
+            activity: Activity,
+            sourceUri: Uri,
+            cropLauncher: ActivityResultLauncher<Intent>
+        ) {
+            val destinationUri = Uri.fromFile(File(activity.cacheDir, "cropped_image.jpg"))
+            val options = UCrop.Options().apply {
+                setCompressionFormat(Bitmap.CompressFormat.JPEG)
+                setCompressionQuality(100)
+                setFreeStyleCropEnabled(true)
+            }
+            val intent = UCrop.of(sourceUri, destinationUri)
+                .withOptions(options)
+                .getIntent(activity)
+
+            cropLauncher.launch(intent)
+        }
+
+        /**
+         * Xử lý ảnh cắt
+         */
+        fun handleCropResult(data: Intent?): Uri? {
+            return data?.let { UCrop.getOutput(it) }
         }
 
         /**

@@ -9,7 +9,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -17,21 +17,21 @@ import androidx.transition.TransitionInflater
 import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.lebatinh.messenger.databinding.FragmentAccountInfoBinding
+import com.lebatinh.messenger.other.AreaCode
 import com.lebatinh.messenger.other.ReturnResult
-import com.lebatinh.messenger.user.AreaCode
-import com.lebatinh.messenger.user.UserRepository
 import com.lebatinh.messenger.user.UserViewModel
-import com.lebatinh.messenger.user.UserViewModelFactory
 import com.lebatinh.messenger.user.Validator
+import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+@AndroidEntryPoint
 class AccountInfoFragment : Fragment() {
     private var _binding: FragmentAccountInfoBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var userViewModel: UserViewModel
+    private val userViewModel: UserViewModel by viewModels()
     private lateinit var validator: Validator
 
     private var type: String? = null
@@ -43,10 +43,6 @@ class AccountInfoFragment : Fragment() {
             .inflateTransition(android.R.transition.move)
         sharedElementReturnTransition = TransitionInflater.from(requireContext())
             .inflateTransition(android.R.transition.move)
-
-        val repository = UserRepository()
-        userViewModel =
-            ViewModelProvider(this, UserViewModelFactory(repository))[UserViewModel::class.java]
 
         validator = Validator()
     }

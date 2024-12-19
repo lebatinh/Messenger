@@ -16,16 +16,20 @@
 
     </group>
 
-    <group android:id="@+id/grFriend">
+    <group android:id="@+id/grCommunity">
         <item
-            android:id="@+id/itFriend"
+            android:id="@+id/itCommunity"
             android:enabled="false"
             android:title="@string/see_more">
             <menu>
                 <item
-                    android:id="@+id/friendFragment"
-                    android:icon="@drawable/friend"
-                    android:title="@string/friend_title" />
+                    android:id="@+id/communityFragment"
+                    android:icon="@drawable/community"
+                    android:title="@string/community_title" />
+                <item
+                    android:id="@+id/friendInvitationFragment"
+                    android:icon="@drawable/invitation"
+                    android:title="@string/friend_invitation" />
             </menu>
         </item>
     </group>

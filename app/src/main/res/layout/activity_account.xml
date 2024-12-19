@@ -20,4 +20,8 @@
         app:layout_constraintTop_toTopOf="parent"
         app:navGraph="@navigation/account_graph" />
 
+    <include
+        android:id="@+id/layout_permissions"
+        layout="@layout/layout_permission_blocking"
+        android:visibility="gone" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

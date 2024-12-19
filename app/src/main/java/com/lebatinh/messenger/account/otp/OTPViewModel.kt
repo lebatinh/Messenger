@@ -5,36 +5,32 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lebatinh.messenger.other.ReturnResult
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class OTPViewModel(private val otpRepository: OTPRepository) : ViewModel() {
+@HiltViewModel
+class OTPViewModel @Inject constructor(private val otpUseCase: OTPUseCase) : ViewModel() {
     private val _otpResult = MutableLiveData<ReturnResult<Unit>?>()
     val otpResult: LiveData<ReturnResult<Unit>?> get() = _otpResult
-
-    private val _otpVerificationResult = MutableLiveData<ReturnResult<Unit>?>()
-    val otpVerificationResult: LiveData<ReturnResult<Unit>?> get() = _otpVerificationResult
 
     fun createAndSendOtp(email: String) {
         viewModelScope.launch {
             _otpResult.value = ReturnResult.Loading
-            val result = otpRepository.createAndSendOtp(email)
+            val result = otpUseCase.createAndSendOtp(email)
             _otpResult.postValue(result)
         }
     }
 
     fun verifyOtp(email: String, inputOtp: String) {
         viewModelScope.launch {
-            _otpVerificationResult.postValue(ReturnResult.Loading)
-            val result = otpRepository.verifyOtp(email, inputOtp)
-            _otpVerificationResult.postValue(result)
+            _otpResult.postValue(ReturnResult.Loading)
+            val result = otpUseCase.verifyOTP(email, inputOtp)
+            _otpResult.postValue(result)
         }
     }
 
     fun resetReturnResult() {
         _otpResult.postValue(null)
-    }
-
-    fun resetOtpVerificationResult() {
-        _otpVerificationResult.postValue(null)
     }
 }

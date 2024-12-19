@@ -1,6 +1,7 @@
 buildscript {
     dependencies {
         classpath(libs.androidx.navigation.safe.args.gradle.plugin)
+        classpath(libs.hilt.android.gradle.plugin)
     }
 }
 
@@ -10,5 +11,5 @@ plugins {
 
     id("com.google.gms.google-services") version "4.4.2" apply false
 
-    id("com.google.devtools.ksp") version "1.9.10-1.0.13" apply false
+    id("com.google.devtools.ksp") version "2.0.20-1.0.24" apply false
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="text_color">#FF000000</color>
+    <color name="text_des">#1F1F1F</color>
     <color name="background">#FFFFFFFF</color>
     <color name="bg_button_default">#2C2C2C</color>
     <color name="bg_button_disable">#BDBDBD</color>
@@ -10,4 +11,7 @@
     <color name="loading">#80000000</color>
     <color name="border_color_disable">#80FF0000</color>
     <color name="border_color_enable">#8000FFF9</color>
+    <color name="background_color_message">#80009DFF</color>
+    <color name="transparent">#00000000</color>
+    <color name="transparent_40">#66000000</color>
 </resources>

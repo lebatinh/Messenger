@@ -9,26 +9,26 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.transition.TransitionInflater
 import com.google.android.material.snackbar.Snackbar
 import com.lebatinh.messenger.R
-import com.lebatinh.messenger.account.otp.OTPRepository
 import com.lebatinh.messenger.account.otp.OTPViewModel
-import com.lebatinh.messenger.account.otp.OTPViewModelFactory
 import com.lebatinh.messenger.databinding.FragmentOtpBinding
 import com.lebatinh.messenger.helper.GmailHelper
 import com.lebatinh.messenger.other.ReturnResult
 import com.lebatinh.messenger.user.Validator
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class OTPFragment : Fragment() {
     private var _binding: FragmentOtpBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var otpViewModel: OTPViewModel
+    private val otpViewModel: OTPViewModel by viewModels()
     private lateinit var gmailHelper: GmailHelper
     private lateinit var validator: Validator
 
@@ -46,11 +46,11 @@ class OTPFragment : Fragment() {
             .inflateTransition(android.R.transition.move)
 
         gmailHelper = GmailHelper()
-        val repositoryOTP = OTPRepository()
-        otpViewModel =
-            ViewModelProvider(this, OTPViewModelFactory(repositoryOTP))[OTPViewModel::class.java]
-
         validator = Validator()
+
+        val args: OTPFragmentArgs by navArgs()
+        type = args.type
+        email = args.email
     }
 
     override fun onCreateView(
@@ -59,10 +59,6 @@ class OTPFragment : Fragment() {
     ): View {
         _binding = FragmentOtpBinding.inflate(inflater, container, false)
         val root: View = binding.root
-
-        val args: OTPFragmentArgs by navArgs()
-        type = args.type
-        email = args.email
 
         binding.imgBackOTP.setOnClickListener {
             findNavController().popBackStack()
@@ -92,10 +88,9 @@ class OTPFragment : Fragment() {
         return root
     }
 
-    override fun onResume() {
-        super.onResume()
-
-        otpViewModel.otpVerificationResult.observe(viewLifecycleOwner) { otpResult ->
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        otpViewModel.otpResult.observe(viewLifecycleOwner) { otpResult ->
             when (otpResult) {
                 ReturnResult.Loading -> {
                     binding.frLoading.visibility = View.VISIBLE
@@ -127,7 +122,7 @@ class OTPFragment : Fragment() {
                                     )
                                 findNavController().navigate(action, extras)
                             }
-                            otpViewModel.resetOtpVerificationResult()
+                            otpViewModel.resetReturnResult()
                         }
 
                         "change_pass" -> {
@@ -144,7 +139,7 @@ class OTPFragment : Fragment() {
                                     )
                                 findNavController().navigate(action, extras)
                             }
-                            otpViewModel.resetOtpVerificationResult()
+                            otpViewModel.resetReturnResult()
                         }
 
                         else -> {
@@ -168,7 +163,7 @@ class OTPFragment : Fragment() {
         val totalTime = 180 * 1000L
         val interval = 1000L
 
-        binding.tvReSendOTP.text = "Gửi lại OTP sau"
+        binding.tvReSendOTP.text = getString(R.string.send_later)
 
         val drawable = tvTimeOTP.background as GradientDrawable
 
@@ -182,7 +177,7 @@ class OTPFragment : Fragment() {
                         2,
                         ContextCompat.getColor(requireContext(), R.color.border_color_enable)
                     )
-                    binding.tvReSendOTP.text = "Gửi lại OTP"
+                    binding.tvReSendOTP.text = getString(R.string.resend_otp)
                 } else {
                     drawable.setStroke(
                         2,
@@ -192,7 +187,7 @@ class OTPFragment : Fragment() {
             }
 
             override fun onFinish() {
-                tvTimeOTP.text = "0s"
+                tvTimeOTP.text = getString(R.string._0s)
                 binding.tvReSendOTP.isEnabled = true
                 resendOTP()
                 drawable.setStroke(

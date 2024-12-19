@@ -11,7 +11,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
@@ -25,19 +25,19 @@ import com.lebatinh.messenger.databinding.FragmentLoginBinding
 import com.lebatinh.messenger.helper.DataStoreManager
 import com.lebatinh.messenger.mess.MessageActivity
 import com.lebatinh.messenger.other.ReturnResult
-import com.lebatinh.messenger.user.UserRepository
 import com.lebatinh.messenger.user.UserViewModel
-import com.lebatinh.messenger.user.UserViewModelFactory
 import com.lebatinh.messenger.user.Validator
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var userViewModel: UserViewModel
+    private val userViewModel: UserViewModel by viewModels()
 
     private lateinit var validator: Validator
 
@@ -50,10 +50,6 @@ class LoginFragment : Fragment() {
             .inflateTransition(android.R.transition.move)
 
         validator = Validator()
-
-        val repository = UserRepository()
-        userViewModel =
-            ViewModelProvider(this, UserViewModelFactory(repository))[UserViewModel::class.java]
     }
 
     override fun onCreateView(
@@ -139,9 +135,8 @@ class LoginFragment : Fragment() {
         return root
     }
 
-    override fun onResume() {
-        super.onResume()
-
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         userViewModel.returnResult.observe(viewLifecycleOwner) {
             when (it) {
                 is ReturnResult.Loading -> {
@@ -155,6 +150,7 @@ class LoginFragment : Fragment() {
                     if (!user.email.isNullOrEmpty()) {
                         val intent = Intent(requireContext(), MessageActivity::class.java)
                         intent.putExtra("email", user.email)
+                        intent.putExtra("userUID", user.userUID)
                         startActivity(intent)
                         requireActivity().finish()
                     }

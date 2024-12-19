@@ -14,4 +14,8 @@
     <external-path
         name="external_files"
         path="Pictures/" />
+
+    <files-path
+        name="internal_files"
+        path="." />
 </paths>
