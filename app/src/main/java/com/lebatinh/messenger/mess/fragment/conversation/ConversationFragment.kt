@@ -444,16 +444,19 @@ class ConversationFragment : Fragment(), MenuProvider {
             setItemViewCacheSize(3)
             setHasFixedSize(true)
 
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    super.onScrollStateChanged(recyclerView, newState)
-                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                        checkAndPlayVisibleVideo()
-                    } else {
-                        pauseCurrentVideo()
+            if (messageAdapter.itemCount != 0) {
+                addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                        super.onScrollStateChanged(recyclerView, newState)
+                        if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                            checkAndPlayVisibleVideo()
+                        } else {
+                            pauseCurrentVideo()
+                        }
                     }
-                }
-            })
+                })
+            }
+
         }
     }
 
