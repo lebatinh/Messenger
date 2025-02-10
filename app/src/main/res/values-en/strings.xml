@@ -40,7 +40,7 @@
     <string name="enter_new_password">Enter new password</string>
     <string name="new_password">New password</string>
     <string name="renew_password">Re-enter new password</string>
-    <string name="email_forgot_pass">Password change email has been sent to your email. \n Please check your inbox (it might be in spam)</string>
+    <string name="email_forgot_pass">Password change email has been sent to your email.\nPlease check your inbox (it might be in spam)</string>
     <string name="phone_VN">+84</string>
     <string name="remember_me">Remember me</string>
     <string name="home_messenger_title">Chat</string>
