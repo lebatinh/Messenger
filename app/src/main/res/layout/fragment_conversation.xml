@@ -28,7 +28,7 @@
                 app:layout_constraintBottom_toTopOf="@id/ctlToolMessage"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                tools:listitem="@layout/message_item" />
+                tools:listitem="@layout/message_text_item" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/ctlToolMessage"

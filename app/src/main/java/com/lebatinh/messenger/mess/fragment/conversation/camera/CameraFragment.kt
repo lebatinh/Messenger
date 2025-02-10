@@ -1,17 +1,22 @@
 package com.lebatinh.messenger.mess.fragment.conversation.camera
 
-import android.animation.ObjectAnimator
+import android.Manifest
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.ScaleAnimation
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
@@ -21,12 +26,15 @@ import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
+import androidx.core.content.PermissionChecker
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.transition.TransitionManager
 import com.bumptech.glide.Glide
+import com.google.android.material.snackbar.Snackbar
+import com.lebatinh.messenger.Key_Password.MAX_VIDEO_SIZE
 import com.lebatinh.messenger.R
 import com.lebatinh.messenger.databinding.FragmentCameraBinding
 import java.io.File
@@ -44,7 +52,6 @@ class CameraFragment : Fragment() {
     private val args: CameraFragmentArgs by navArgs()
 
     private lateinit var cameraProvider: ProcessCameraProvider
-
     private lateinit var preview: Preview
     private lateinit var imageCapture: ImageCapture
     private lateinit var videoCapture: VideoCapture<Recorder>
@@ -55,8 +62,7 @@ class CameraFragment : Fragment() {
     private var isFrontCamera = false
 
     private var videoFile: File? = null
-
-    private var recordingAnimator: ObjectAnimator? = null
+    private var recordingAnimator: ScaleAnimation? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,84 +99,99 @@ class CameraFragment : Fragment() {
         loadLastImage()
 
         binding.btnImageCapture.setOnClickListener {
-            // Chụp ảnh
-            val photoFile = File(requireContext().cacheDir, "${System.currentTimeMillis()}.jpg")
-            val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-            imageCapture.takePicture(
-                outputOptions,
-                ContextCompat.getMainExecutor(requireContext()),
-                object : ImageCapture.OnImageSavedCallback {
-                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                        if (!currentUID.isNullOrEmpty() && isGroup != null) {
-                            val action =
-                                CameraFragmentDirections.actionCameraFragmentToPreviewFragment(
-                                    currentUID!!,
-                                    receiverUID,
-                                    conversationId,
-                                    isGroup!!,
-                                    true,
-                                    photoFile.absolutePath
-                                )
-                            findNavController().navigate(action)
-                        }
-                    }
-
-                    override fun onError(exception: ImageCaptureException) {
-                        Log.e("CameraActivity", "Chụp ảnh thất bại: ${exception.message}")
-                    }
-                })
+            captureImage()
         }
 
         binding.btnVideoRecord.setOnClickListener {
             if (!isRecording) {
                 startRecording()
-                binding.btnVideoRecord.isEnabled = false
-                binding.btnVideoRecord.isVisible = false
-                binding.btnVideoStop.isVisible = true
-                binding.btnVideoStop.isEnabled = true
             }
         }
 
         binding.btnVideoStop.setOnClickListener {
             if (isRecording) {
                 stopRecording()
-                binding.btnVideoRecord.isEnabled = true
-                binding.btnVideoRecord.isVisible = true
-                binding.btnVideoStop.isVisible = false
-                binding.btnVideoStop.isEnabled = false
             }
         }
 
         return root
     }
 
+    private fun captureImage() {
+        val photoFile = File(requireContext().cacheDir, "${System.currentTimeMillis()}.jpg")
+
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+        imageCapture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(requireContext()),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    if (!currentUID.isNullOrEmpty() && isGroup != null) {
+                        val action =
+                            CameraFragmentDirections.actionCameraFragmentToPreviewFragment(
+                                currentUID!!,
+                                receiverUID,
+                                conversationId,
+                                isGroup!!,
+                                true,
+                                photoFile.absolutePath
+                            )
+                        findNavController().navigate(action)
+                    }
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e("CameraFragment", "Chụp ảnh thất bại: ${exception.message}")
+                }
+            })
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        if (!isSupportedVideoEncoder()) {
+            Snackbar.make(
+                binding.root,
+                "Your device may not support video recording",
+                Snackbar.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val qualitySelector = QualitySelector.fromOrderedList(
+            listOf(
+                Quality.SD,
+                Quality.HD,
+                Quality.FHD,
+                Quality.UHD
+            ),
+            FallbackStrategy.lowerQualityOrHigherThan(Quality.SD)
+        )
+
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
+            try {
+                cameraProvider = cameraProviderFuture.get()
 
-            preview = Preview.Builder().build().also {
-                it.surfaceProvider = binding.preview.surfaceProvider
+                preview = Preview.Builder().build().also {
+                    it.surfaceProvider = binding.preview.surfaceProvider
+                }
+
+                imageCapture = ImageCapture.Builder()
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .build()
+
+                val recorder = Recorder.Builder()
+                    .setQualitySelector(qualitySelector)
+                    .setExecutor(ContextCompat.getMainExecutor(requireContext()))
+                    .build()
+                videoCapture = VideoCapture.withOutput(recorder)
+                startCamera()
+
+            } catch (e: Exception) {
+                Log.e("CameraFragment", "Camera initialization failed", e)
             }
-
-            imageCapture = ImageCapture.Builder().build()
-
-            val recorder = Recorder.Builder()
-                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
-                .build()
-            videoCapture = VideoCapture.withOutput(recorder)
-
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-            cameraProvider.bindToLifecycle(
-                viewLifecycleOwner,
-                cameraSelector,
-                preview,
-                imageCapture,
-                videoCapture
-            )
-
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
@@ -180,12 +201,22 @@ class CameraFragment : Fragment() {
     }
 
     private fun startCamera() {
-        val cameraSelector = CameraSelector.Builder()
-            .requireLensFacing(if (isFrontCamera) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK)
-            .build()
+        try {
+            val cameraSelector = CameraSelector.Builder()
+                .requireLensFacing(if (isFrontCamera) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK)
+                .build()
 
-        cameraProvider.unbindAll() // Hủy camera cũ
-        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, videoCapture)
+            cameraProvider.unbindAll() // Hủy camera cũ
+            cameraProvider.bindToLifecycle(
+                this,
+                cameraSelector,
+                preview,
+                imageCapture,
+                videoCapture
+            )
+        } catch (e: Exception) {
+            Log.e("CameraFragment", "Camera binding failed", e)
+        }
     }
 
     private fun switchMode(isCapture: Boolean) {
@@ -283,39 +314,117 @@ class CameraFragment : Fragment() {
             return
         }
 
-        isRecording = true
-        videoFile = File(requireContext().filesDir, "video_${System.currentTimeMillis()}.mp4")
+        try {
+            isRecording = true
+            videoFile = File(requireContext().filesDir, "video_${System.currentTimeMillis()}.mp4")
 
-        val outputOptions = FileOutputOptions.Builder(videoFile!!).build()
-        recording = videoCapture.output
-            .prepareRecording(requireContext(), outputOptions)
-            .start(ContextCompat.getMainExecutor(requireContext())) { event ->
-                when (event) {
-                    is VideoRecordEvent.Start -> {
-                        // Bắt đầu quay video thành công
-                        Log.d("CameraFragment", "Recording started")
-                        startRecordingAnimation()
-                    }
+            val outputOptions =
+                FileOutputOptions.Builder(videoFile!!).setFileSizeLimit(MAX_VIDEO_SIZE.toLong())
+                    .build()
 
-                    is VideoRecordEvent.Finalize -> {
-                        if (!event.hasError()) {
-                            goToPreviewFragment(videoFile!!.absolutePath)
-                        } else {
-                            Log.e("CameraFragment", "Error recording video: ${event.error}")
-                        }
-                        // Dừng recording, reset flag
-                        isRecording = false
-                        stopRecording()
+            recording = videoCapture.output
+                .prepareRecording(requireContext(), outputOptions)
+                .apply {
+                    if (PermissionChecker.checkSelfPermission(
+                            requireContext(),
+                            Manifest.permission.RECORD_AUDIO
+                        ) == PermissionChecker.PERMISSION_GRANTED
+                    ) {
+                        withAudioEnabled()
                     }
                 }
-            }
-        startRecordingAnimation()
+                .start(ContextCompat.getMainExecutor(requireContext())) { event ->
+                    when (event) {
+                        is VideoRecordEvent.Start -> {
+                            // Bắt đầu quay video thành công
+                            Log.d("CameraFragment", "Recording started")
+                            updateRecordingUI(true)
+                            startRecordingAnimation()
+                        }
+
+                        is VideoRecordEvent.Finalize -> {
+                            if (!event.hasError()) {
+                                videoFile?.let { file ->
+                                    if (file.exists() && file.length() > 0) {
+                                        goToPreviewFragment(file.absolutePath)
+                                    } else {
+                                        Log.e(
+                                            "CameraFragment",
+                                            "Video file is empty or does not exist"
+                                        )
+                                        Snackbar.make(
+                                            binding.root,
+                                            "Failed to save video",
+                                            Snackbar.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            } else {
+                                Log.e("CameraFragment", "Error recording video: ${event.cause}")
+                                videoFile?.delete()
+                            }
+                            // Dừng recording, reset flag
+                            isRecording = false
+                            stopRecording()
+                            updateRecordingUI(false)
+                            stopRecordingAnimation()
+                        }
+                    }
+                }
+
+        } catch (e: Exception) {
+            Log.e("CameraFragment", "Failed to start recording", e)
+            isRecording = false
+            recording = null
+            updateRecordingUI(false)
+            videoFile?.delete()
+            Snackbar.make(
+                requireContext(),
+                binding.root,
+                "Failed to start recording: ${e.message}",
+                Snackbar.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun stopRecording() {
-        recording?.stop()  // Dừng recording
-        recording = null
-        resetRecordingUI() // Reset giao diện sau khi dừng quay
+        try {
+            recording?.stop()
+            recording = null
+            isRecording = false
+            stopRecordingAnimation()
+            updateRecordingUI(false)
+        } catch (e: Exception) {
+            Log.e("CameraFragment", "Failed to stop recording", e)
+            // Trong trường hợp lỗi, vẫn reset UI
+            isRecording = false
+            recording = null
+            updateRecordingUI(false)
+            stopRecordingAnimation()
+            videoFile?.delete() // Xóa file nếu có lỗi khi dừng
+        }
+    }
+
+    private fun updateRecordingUI(isRecording: Boolean) {
+        binding.apply {
+            btnVideoRecord.isEnabled = !isRecording
+            btnVideoRecord.isVisible = !isRecording
+            btnVideoStop.isVisible = isRecording
+            btnVideoStop.isEnabled = isRecording
+        }
+    }
+
+    private fun isSupportedVideoEncoder(): Boolean {
+        return try {
+            val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+            val encoderInfo = codecList.codecInfos.firstOrNull {
+                it.isEncoder && it.supportedTypes.contains(MediaFormat.MIMETYPE_VIDEO_AVC)
+            }
+            encoderInfo != null
+        } catch (e: Exception) {
+            Log.e("CameraFragment", "Error checking video encoder support", e)
+            false
+        }
     }
 
     private fun goToPreviewFragment(videoPath: String) {
@@ -347,20 +456,22 @@ class CameraFragment : Fragment() {
     }
 
     private fun startRecordingAnimation() {
-        recordingAnimator =
-            ObjectAnimator.ofFloat(binding.btnVideoStop, View.SCALE_X, 1f, 1.2f, 1f).apply {
-                duration = 1000
-                repeatCount = ObjectAnimator.INFINITE
-                repeatMode = ObjectAnimator.REVERSE
-            }
-        recordingAnimator?.start()
+        recordingAnimator = ScaleAnimation(
+            1.0f, 1.1f,
+            1.0f, 1.1f,
+            Animation.RELATIVE_TO_SELF, 0.5f,
+            Animation.RELATIVE_TO_SELF, 0.5f
+        ).apply {
+            duration = 300
+            repeatCount = Animation.INFINITE
+            repeatMode = Animation.REVERSE
+        }
+
+        binding.btnVideoStop.startAnimation(recordingAnimator)
     }
 
-    private fun resetRecordingUI() {
-        TransitionManager.beginDelayedTransition(binding.root)
-        binding.btnVideoRecord.visibility = View.VISIBLE
-        binding.btnVideoStop.visibility = View.GONE
+    private fun stopRecordingAnimation() {
         recordingAnimator?.cancel()
-        recordingAnimator = null
+        binding.btnVideoStop.clearAnimation()
     }
 }

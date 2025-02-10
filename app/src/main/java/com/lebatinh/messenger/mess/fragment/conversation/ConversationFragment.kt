@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
+import androidx.core.view.size
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -28,7 +29,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.CollapsingToolbarLayout
@@ -39,7 +39,6 @@ import com.lebatinh.messenger.R
 import com.lebatinh.messenger.databinding.FragmentConversationBinding
 import com.lebatinh.messenger.mess.CloudinaryViewModel
 import com.lebatinh.messenger.mess.fragment.conversation.media.FullscreenMediaDialog
-import com.lebatinh.messenger.mess.fragment.conversation.media.PlayerPool
 import com.lebatinh.messenger.notification.NotiHelper
 import com.lebatinh.messenger.other.MessageType
 import com.lebatinh.messenger.other.NotificationType
@@ -75,7 +74,6 @@ class ConversationFragment : Fragment(), MenuProvider {
     private val args: ConversationFragmentArgs by navArgs()
 
     private lateinit var messageAdapter: MessageAdapter
-    private var currentPlayingPosition = -1
 
     private var listIdChatPerson = emptyList<String>()
     private lateinit var conversationName: String
@@ -440,91 +438,40 @@ class ConversationFragment : Fragment(), MenuProvider {
         binding.rcvMessage.apply {
             adapter = messageAdapter
             layoutManager = LinearLayoutManager(requireContext())
-            (layoutManager as LinearLayoutManager).initialPrefetchItemCount = 3
-            setItemViewCacheSize(3)
+
             setHasFixedSize(true)
 
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    super.onScrollStateChanged(recyclerView, newState)
-                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                        checkAndPlayVisibleVideo()
-                    } else {
-                        pauseCurrentVideo()
-                    }
-                }
-            })
-        }
-    }
-
-    private fun initializeAdapter() {
-        messageAdapter = MessageAdapter(
-            items = mutableListOf(),
-            currentUserId = currentUID!!,
-            searchUserById = { userId ->
-                withContext(Dispatchers.IO) {
-                    userViewModel.getInfoUserByUID(userId)
-                }
-            },
-            onClickItem = { message -> handleMessageClick(message) },
-            onLongClickItem = { message -> /* Xử lý long click */ }
-        )
-    }
-
-    private fun checkAndPlayVisibleVideo() {
-        val layoutManager = binding.rcvMessage.layoutManager as LinearLayoutManager
-        val firstVisible = layoutManager.findFirstVisibleItemPosition()
-        val lastVisible = layoutManager.findLastVisibleItemPosition()
-
-        for (position in firstVisible..lastVisible) {
-            val message = messageAdapter.getItem(position)
-            if (message.type == MessageType.VIDEO) {
-                // Nếu tìm thấy video trong vùng nhìn thấy
-                playVideoAtPosition(position)
-                break
+            if (binding.rcvMessage.size > 0) {
+                smoothScrollToPosition(messageAdapter.itemCount - 1)
             }
         }
     }
 
-    private fun playVideoAtPosition(position: Int) {
-        if (currentPlayingPosition != position) {
-            // Pause video cũ nếu có
-            pauseCurrentVideo()
-
-            // Update vị trí mới và play
-            currentPlayingPosition = position
-            val holder = binding.rcvMessage.findViewHolderForAdapterPosition(position)
-                    as? MessageAdapter.MessageViewHolder
-            holder?.playVideo()
-        }
-    }
-
-    private fun pauseCurrentVideo() {
-        if (currentPlayingPosition != -1) {
-            val holder = binding.rcvMessage.findViewHolderForAdapterPosition(currentPlayingPosition)
-                    as? MessageAdapter.MessageViewHolder
-            holder?.pauseVideo()
-            currentPlayingPosition = -1
-        }
+    private fun initializeAdapter() {
+        messageAdapter = MessageAdapter.Builder()
+            .setCurrentUserId(currentUID!!)
+            .setSearchUserById { userId ->
+                withContext(Dispatchers.IO) {
+                    userViewModel.getInfoUserByUID(userId)
+                }
+            }
+            .setOnClickItem { message -> handleMessageClick(message) }
+            .setOnLongClickItem { message -> /* Xử lý long click */ }
+            .build()
     }
 
     private fun loadMessage(data: List<Message>) {
         if (::messageAdapter.isInitialized) {
             initializeAdapter()
             binding.rcvMessage.adapter = messageAdapter
+            binding.rcvMessage.scrollToPosition(data.size - 1)
         }
         messageAdapter.updateList(data)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        pauseCurrentVideo()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-        PlayerPool.clear()
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
