@@ -1,5 +1,3 @@
-README
-
 1. Đăng ký tài khoản:
 - Nhập đầy đủ và chính xác thông tin để đăng ký tk và nhận otp
 - Giao diện và các bước thực hiện từ trái sang phải
