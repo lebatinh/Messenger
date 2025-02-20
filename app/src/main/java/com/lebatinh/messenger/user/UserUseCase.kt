@@ -1,7 +1,9 @@
 package com.lebatinh.messenger.user
 
+import androidx.paging.PagingData
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.lebatinh.messenger.other.ReturnResult
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -87,13 +89,11 @@ class UserUseCase @Inject constructor(
         }
     }
 
-    suspend fun searchUsers(query: String, currentUserUID: String): ReturnResult<List<User>> {
-        val result = repository.searchUsers(query, currentUserUID)
-
-        if (result is ReturnResult.Success) {
-            return result
-        }
-        return ReturnResult.Error("Lỗi tìm kiếm!")
+    fun getSearchUsersPagingSource(
+        query: String,
+        currentUserUID: String
+    ): Flow<PagingData<User>> {
+        return repository.getUsersPagingFlow(query, currentUserUID)
     }
 
     suspend fun getUserByUID(userUID: String): ReturnResult<User> {

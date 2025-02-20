@@ -4,8 +4,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.lebatinh.messenger.other.ReturnResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,11 +21,10 @@ class UserViewModel @Inject constructor(private val userUseCase: UserUseCase) : 
     private val _unitResult = MutableLiveData<ReturnResult<Unit>?>()
     val unitResult: LiveData<ReturnResult<Unit>?> get() = _unitResult
 
-    private val _listResult = MutableLiveData<ReturnResult<List<User>>?>()
-    val listResult: LiveData<ReturnResult<List<User>>?> get() = _listResult
-
     private val _selectedItems = MutableLiveData<MutableList<User>?>()
     val selectedItems: LiveData<MutableList<User>?> = _selectedItems
+
+    private var currentSearchResult: Flow<PagingData<User>>? = null
 
     fun register(email: String, password: String) {
         viewModelScope.launch {
@@ -70,12 +72,11 @@ class UserViewModel @Inject constructor(private val userUseCase: UserUseCase) : 
         }
     }
 
-    fun searchUsers(query: String, currentUserUID: String) {
-        viewModelScope.launch {
-            _listResult.postValue(ReturnResult.Loading)
-            val result = userUseCase.searchUsers(query, currentUserUID)
-            _listResult.postValue(result)
-        }
+    fun searchUsers(query: String, currentUserUID: String): Flow<PagingData<User>> {
+        val newFlow =
+            userUseCase.getSearchUsersPagingSource(query, currentUserUID).cachedIn(viewModelScope)
+        currentSearchResult = newFlow
+        return newFlow
     }
 
     fun getUserByUID(userUID: String) {
@@ -103,7 +104,6 @@ class UserViewModel @Inject constructor(private val userUseCase: UserUseCase) : 
     fun resetReturnResult() {
         _returnResult.postValue(null)
         _unitResult.postValue(null)
-        _listResult.postValue(null)
         _selectedItems.postValue(null)
     }
 }

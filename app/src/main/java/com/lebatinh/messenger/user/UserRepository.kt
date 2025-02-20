@@ -1,10 +1,16 @@
 package com.lebatinh.messenger.user
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.lebatinh.messenger.Key_Password.COLLECTION_PATH_USER
+import com.lebatinh.messenger.Key_Password.PAGE_SIZE
+import com.lebatinh.messenger.mess.fragment.home.UserPagingSource
 import com.lebatinh.messenger.other.ReturnResult
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -130,54 +136,16 @@ class UserRepository @Inject constructor(
      * Tìm kiếm người dùng với:
      * @param query
      */
-    suspend fun searchUsers(query: String?, currentUserUID: String): ReturnResult<List<User>> {
-        return try {
-            if (query.isNullOrEmpty()) {
-                return ReturnResult.Success(emptyList())
+    fun getUsersPagingFlow(query: String, currentUserUID: String): Flow<PagingData<User>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = PAGE_SIZE,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                UserPagingSource(firestore, query, currentUserUID)
             }
-
-            val results = mutableListOf<User>()
-
-            // Tìm kiếm theo userUID
-            val userUIDSnapshot = firestore.collection(COLLECTION_PATH_USER)
-                .whereEqualTo("userUID", query)
-                .get()
-                .await()
-            for (doc in userUIDSnapshot.documents) {
-                val user = doc.toObject(User::class.java)
-                user?.let { if (!results.contains(it)) results.add(it) }
-            }
-
-            // Tìm kiếm theo số điện thoại
-            if (results.isEmpty()) {
-                val phoneNumberSnapshot =
-                    firestore.collection(COLLECTION_PATH_USER).whereEqualTo("phoneNumber", query)
-                        .get().await()
-                for (doc in phoneNumberSnapshot.documents) {
-                    val user = doc.toObject(User::class.java)
-                    user?.let { if (!results.contains(it)) results.add(it) }
-                }
-            }
-
-            // Tìm kiếm theo tên
-            if (results.isEmpty()) {
-                val fullNameSnapshot = firestore.collection(COLLECTION_PATH_USER)
-                    .whereGreaterThanOrEqualTo("fullName", query)
-                    .whereLessThan("fullName", query + '\uf8ff')
-                    .get()
-                    .await()
-
-                for (doc in fullNameSnapshot.documents) {
-                    val user = doc.toObject(User::class.java)
-                    user?.let { if (!results.contains(it)) results.add(it) }
-                }
-            }
-            val filteredResults = results.filter { it.userUID != currentUserUID }
-
-            ReturnResult.Success(filteredResults)
-        } catch (e: Exception) {
-            ReturnResult.Error(e.localizedMessage ?: "Lỗi khi tìm kiếm người dùng")
-        }
+        ).flow
     }
 
     /**

@@ -81,4 +81,5 @@
     <string name="send_to">Send to</string>
     <string name="resend_otp">Resend OTP</string>
     <string name="_0s">0s</string>
+    <string name="retry">Retry</string>
 </resources>

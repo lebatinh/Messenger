@@ -166,4 +166,8 @@ dependencies {
 
     // OkHttp
     implementation(libs.okhttp)
+
+    // Paging
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.runtime.ktx)
 }

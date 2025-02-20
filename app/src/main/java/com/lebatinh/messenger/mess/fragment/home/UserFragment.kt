@@ -5,17 +5,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.snackbar.Snackbar
 import com.lebatinh.messenger.databinding.FragmentUserBinding
 import com.lebatinh.messenger.mess.fragment.conversation.ConversationViewModel
-import com.lebatinh.messenger.other.ReturnResult
 import com.lebatinh.messenger.user.UserViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class UserFragment : Fragment() {
@@ -25,7 +28,7 @@ class UserFragment : Fragment() {
     private val userViewModel: UserViewModel by viewModels()
     private val conversationViewModel: ConversationViewModel by viewModels()
 
-    private lateinit var adapter: UserAdapter
+    private lateinit var userAdapter: UserAdapter
 
     private val args: UserFragmentArgs by navArgs()
     private lateinit var currentUserUID: String
@@ -51,14 +54,26 @@ class UserFragment : Fragment() {
         binding.svUser.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 if (query != null) {
-                    userViewModel.searchUsers(query, currentUserUID)
+                    lifecycleScope.launch {
+                        userViewModel.searchUsers(query, currentUserUID)
+                            .collectLatest { pagingData ->
+                                userAdapter.submitData(pagingData)
+                            }
+                    }
+
                 }
                 return true
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText != null) {
-                    userViewModel.searchUsers(newText, currentUserUID)
+                    lifecycleScope.launch {
+                        userViewModel.searchUsers(newText, currentUserUID)
+                            .collectLatest { pagingData ->
+                                userAdapter.submitData(pagingData)
+                            }
+                    }
+
                 }
                 return true
             }
@@ -70,48 +85,45 @@ class UserFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        userViewModel.listResult.observe(viewLifecycleOwner) { result ->
-            when (result) {
-                ReturnResult.Loading -> {}
+        setupRecyclerView()
+    }
 
-                is ReturnResult.Success -> {
-                    val listUser = result.data
-
-                    if (::adapter.isInitialized) {
-                        adapter.updateList(listUser)
-                    } else {
-                        adapter = UserAdapter(listUser.toMutableList(), false) { user ->
-                            user.userUID?.let {
-                                conversationViewModel.getConversationIdForOneToOne(
-                                    currentUserUID,
-                                    it
-                                )
-                                conversationViewModel.conversationId.observe(viewLifecycleOwner) { conversationId ->
-                                    val action =
-                                        UserFragmentDirections.actionUserFragmentToConversationFragment(
-                                            currentUserUID,
-                                            it,
-                                            conversationId,
-                                            false
-                                        )
-                                    findNavController().navigate(action)
-                                }
-
-                            }
-                        }
-                    }
-
-                    binding.rcvUser.layoutManager = LinearLayoutManager(requireContext())
-                    binding.rcvUser.adapter = adapter
-                    userViewModel.resetReturnResult()
+    private fun setupRecyclerView() {
+        userAdapter = UserAdapter(false) { user ->
+            user.userUID?.let {
+                conversationViewModel.getConversationIdForOneToOne(
+                    currentUserUID,
+                    it
+                )
+                conversationViewModel.conversationId.observe(viewLifecycleOwner) { conversationId ->
+                    val action =
+                        UserFragmentDirections.actionUserFragmentToConversationFragment(
+                            currentUserUID,
+                            it,
+                            conversationId,
+                            false
+                        )
+                    findNavController().navigate(action)
                 }
 
-                is ReturnResult.Error -> {
-                    Snackbar.make(requireView(), result.message, Snackbar.LENGTH_SHORT).show()
-                    userViewModel.resetReturnResult()
-                }
+            }
+        }
 
-                null -> {}
+        binding.rcvUser.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = this@UserFragment.userAdapter.withLoadStateHeaderAndFooter(
+                header = UserLoadStateAdapter { userAdapter.retry() },
+                footer = UserLoadStateAdapter { userAdapter.retry() }
+            )
+        }
+
+        lifecycleScope.launch {
+            userAdapter.loadStateFlow.collectLatest { loadStates ->
+                // Show loading spinner during initial load or refresh
+                binding.frLoading.isVisible = loadStates.refresh is LoadState.Loading
+
+                // Show retry button if there was an error
+                binding.frLoading.isVisible = loadStates.refresh is LoadState.Error
             }
         }
     }

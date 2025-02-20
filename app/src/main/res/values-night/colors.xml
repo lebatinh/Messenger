@@ -2,6 +2,7 @@
 <resources>
     <color name="text_color">#FFFFFFFF</color>
     <color name="text_des">#313131</color>
+    <color name="text_error">#400000</color>
     <color name="background">#FF000000</color>
     <color name="bg_button_default">#F5F5F5</color>
     <color name="bg_button_disable">#BDBDBD</color>

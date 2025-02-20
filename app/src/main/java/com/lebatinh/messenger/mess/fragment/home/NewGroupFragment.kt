@@ -10,11 +10,14 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.lebatinh.messenger.R
@@ -23,6 +26,8 @@ import com.lebatinh.messenger.mess.fragment.conversation.ConversationViewModel
 import com.lebatinh.messenger.other.ReturnResult
 import com.lebatinh.messenger.user.UserViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class NewGroupFragment : Fragment(), MenuProvider {
@@ -33,7 +38,7 @@ class NewGroupFragment : Fragment(), MenuProvider {
     private val userViewModel: UserViewModel by viewModels()
     private val conversationViewModel: ConversationViewModel by viewModels()
 
-    private lateinit var adapter: UserAdapter
+    private lateinit var userAdapter: UserAdapter
 
     private var listUser = mutableListOf<String>()
     private var currentUserUID: String? = null
@@ -55,14 +60,24 @@ class NewGroupFragment : Fragment(), MenuProvider {
         binding.svNewGroup.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 if (query != null && !currentUserUID.isNullOrEmpty()) {
-                    userViewModel.searchUsers(query, currentUserUID!!)
+                    lifecycleScope.launch {
+                        userViewModel.searchUsers(query, currentUserUID!!)
+                            .collectLatest { pagingData ->
+                                userAdapter.submitData(pagingData)
+                            }
+                    }
                 }
                 return true
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText != null && !currentUserUID.isNullOrEmpty()) {
-                    userViewModel.searchUsers(newText, currentUserUID!!)
+                    lifecycleScope.launch {
+                        userViewModel.searchUsers(newText, currentUserUID!!)
+                            .collectLatest { pagingData ->
+                                userAdapter.submitData(pagingData)
+                            }
+                    }
                 }
                 return true
             }
@@ -77,34 +92,7 @@ class NewGroupFragment : Fragment(), MenuProvider {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        userViewModel.listResult.observe(viewLifecycleOwner) { result ->
-            when (result) {
-                ReturnResult.Loading -> {}
-
-                is ReturnResult.Success -> {
-                    val listUser = result.data
-
-                    if (::adapter.isInitialized) {
-                        adapter.updateList(listUser)
-                    } else {
-                        adapter = UserAdapter(listUser.toMutableList(), true) {
-                            userViewModel.toggleSelection(it)
-                        }
-                        binding.rcvNewGroup.layoutManager = LinearLayoutManager(requireContext())
-                        binding.rcvNewGroup.adapter = adapter
-                    }
-
-                    userViewModel.resetReturnResult()
-                }
-
-                is ReturnResult.Error -> {
-                    Snackbar.make(requireView(), result.message, Snackbar.LENGTH_SHORT).show()
-                    userViewModel.resetReturnResult()
-                }
-
-                null -> {}
-            }
-        }
+        setupRecyclerView()
 
         userViewModel.selectedItems.observe(viewLifecycleOwner) { listUser ->
             this.listUser.clear()
@@ -112,7 +100,7 @@ class NewGroupFragment : Fragment(), MenuProvider {
             listUser?.forEach { user ->
                 this.listUser.add(user.userUID.toString())
             }
-            adapter.updateSelectedUsers(this.listUser)
+            userAdapter.updateSelectedUsers(this.listUser)
             requireActivity().invalidateMenu()
         }
 
@@ -136,6 +124,30 @@ class NewGroupFragment : Fragment(), MenuProvider {
                 }
 
                 null -> {}
+            }
+        }
+    }
+
+    private fun setupRecyclerView() {
+        userAdapter = UserAdapter(true) { user ->
+            userViewModel.toggleSelection(user)
+        }
+
+        binding.rcvNewGroup.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = this@NewGroupFragment.userAdapter.withLoadStateHeaderAndFooter(
+                header = UserLoadStateAdapter { userAdapter.retry() },
+                footer = UserLoadStateAdapter { userAdapter.retry() }
+            )
+        }
+
+        lifecycleScope.launch {
+            userAdapter.loadStateFlow.collectLatest { loadStates ->
+                // Show loading spinner during initial load or refresh
+                binding.frLoading.isVisible = loadStates.refresh is LoadState.Loading
+
+                // Show retry button if there was an error
+                binding.frLoading.isVisible = loadStates.refresh is LoadState.Error
             }
         }
     }
