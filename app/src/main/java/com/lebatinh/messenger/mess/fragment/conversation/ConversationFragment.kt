@@ -457,6 +457,7 @@ class ConversationFragment : Fragment(), MenuProvider {
             }
             .setOnClickItem { message -> handleMessageClick(message) }
             .setOnLongClickItem { message -> /* Xử lý long click */ }
+            .setLifecycleOwner(viewLifecycleOwner)
             .build()
     }
 

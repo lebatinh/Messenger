@@ -81,4 +81,5 @@
     <string name="resend_otp">Gửi lại OTP</string>
     <string name="_0s">0s</string>
     <string name="retry">Retry</string>
+    <string name="scroll_to_bottom">Scroll to bottom</string>
 </resources>

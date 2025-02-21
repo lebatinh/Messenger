@@ -112,8 +112,8 @@ class UserFragment : Fragment() {
         binding.rcvUser.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@UserFragment.userAdapter.withLoadStateHeaderAndFooter(
-                header = UserLoadStateAdapter { userAdapter.retry() },
-                footer = UserLoadStateAdapter { userAdapter.retry() }
+                header = CustomLoadStateAdapter { userAdapter.retry() },
+                footer = CustomLoadStateAdapter { userAdapter.retry() }
             )
         }
 

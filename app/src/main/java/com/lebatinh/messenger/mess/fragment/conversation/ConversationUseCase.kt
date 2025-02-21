@@ -1,5 +1,6 @@
 package com.lebatinh.messenger.mess.fragment.conversation
 
+import androidx.paging.PagingData
 import com.lebatinh.messenger.other.MessageType
 import com.lebatinh.messenger.other.ReturnResult
 import kotlinx.coroutines.flow.Flow
@@ -30,13 +31,12 @@ class ConversationUseCase @Inject constructor(
         return repository.updateConversationToGroup(conversationId, newUserIds)
     }
 
-    suspend fun getConversationsByUserId(
+    fun getConversationsPagingFlow(
         currentUID: String,
         isGroup: Boolean? = null
-    ): ReturnResult<List<Conversation>> {
-        return repository.getConversationsByUserId(currentUID, isGroup)
+    ): Flow<PagingData<Conversation>> {
+        return repository.getConversationsPagingFlow(currentUID, isGroup)
     }
-
     suspend fun sendMessage(
         senderId: String,
         receiverId: String?,

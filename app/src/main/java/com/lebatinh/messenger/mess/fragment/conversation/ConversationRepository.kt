@@ -1,5 +1,8 @@
 package com.lebatinh.messenger.mess.fragment.conversation
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -7,6 +10,7 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.lebatinh.messenger.Key_Password.COLLECTION_PATH_CONVERSATION
 import com.lebatinh.messenger.Key_Password.COLLECTION_PATH_MESSAGE
+import com.lebatinh.messenger.Key_Password.PAGE_SIZE
 import com.lebatinh.messenger.other.MessageType
 import com.lebatinh.messenger.other.ReturnResult
 import kotlinx.coroutines.Dispatchers
@@ -117,30 +121,20 @@ class ConversationRepository @Inject constructor(
      * @param isGroup: Nếu true, chỉ lấy các nhóm;
      * nếu false, chỉ lấy các cuộc trò chuyện cá nhân; nếu null, lấy tất cả
      */
-    suspend fun getConversationsByUserId(
+    fun getConversationsPagingFlow(
         currentUID: String,
-        isGroup: Boolean? = null
-    ): ReturnResult<List<Conversation>> {
-        return try {
-            val query = firestore.collection(COLLECTION_PATH_CONVERSATION)
-                .whereArrayContains("listIdChatPerson", currentUID)
-
-            val filteredQuery = when (isGroup) {
-                true -> query.whereEqualTo("group", true)
-                false -> query.whereEqualTo("group", false)
-                else -> query
+        isGroup: Boolean?
+    ): Flow<PagingData<Conversation>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = PAGE_SIZE,
+                enablePlaceholders = false,
+                initialLoadSize = PAGE_SIZE
+            ),
+            pagingSourceFactory = {
+                ConversationPagingSource(firestore, currentUID, isGroup)
             }
-
-            val snapshot = filteredQuery.get().await()
-
-            val conversations = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(Conversation::class.java)
-            }
-
-            ReturnResult.Success(conversations)
-        } catch (e: Exception) {
-            ReturnResult.Error(e.localizedMessage ?: "Lỗi khi lấy danh sách cuộc trò chuyện")
-        }
+        ).flow
     }
 
     suspend fun sendMessage(

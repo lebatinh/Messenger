@@ -2,6 +2,7 @@ package com.lebatinh.messenger.mess.fragment.conversation
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.lebatinh.messenger.databinding.MessageImageItemBinding
@@ -19,7 +20,8 @@ class MessageAdapter(
     private val currentUserId: String,
     private val searchUserById: suspend (String) -> User?,
     private val onClickItem: (Message) -> Unit,
-    private val onLongClickItem: (Message) -> Unit
+    private val onLongClickItem: (Message) -> Unit,
+    private val lifecycleOwner: LifecycleOwner
 ) : RecyclerView.Adapter<MessageViewHolder>() {
 
     private var items: MutableList<Message> = mutableListOf()
@@ -30,11 +32,22 @@ class MessageAdapter(
         const val VIEW_TYPE_VIDEO = 3
     }
 
+    override fun onViewRecycled(holder: MessageViewHolder) {
+        super.onViewRecycled(holder)
+        holder.onRecycled()
+    }
+
+    override fun onViewDetachedFromWindow(holder: MessageViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+        holder.onDetachedFromWindow()
+    }
+
     class Builder {
         private var currentUserId: String = ""
         private var searchUserById: (suspend (String) -> User?)? = null
         private var onClickItem: ((Message) -> Unit)? = null
         private var onLongClickItem: ((Message) -> Unit)? = null
+        private var lifecycleOwner: LifecycleOwner? = null
 
         fun setCurrentUserId(userId: String) = apply {
             this.currentUserId = userId
@@ -52,12 +65,17 @@ class MessageAdapter(
             this.onLongClickItem = onLongClick
         }
 
+        fun setLifecycleOwner(owner: LifecycleOwner) = apply {
+            this.lifecycleOwner = owner
+        }
+
         fun build(): MessageAdapter {
             return MessageAdapter(
                 currentUserId,
                 searchUserById!!,
                 onClickItem!!,
-                onLongClickItem!!
+                onLongClickItem!!,
+                lifecycleOwner!!
             )
         }
     }
@@ -85,7 +103,8 @@ class MessageAdapter(
                 currentUserId,
                 searchUserById,
                 onClickItem,
-                onLongClickItem
+                onLongClickItem,
+                lifecycleOwner
             )
 
             else -> throw IllegalArgumentException("Invalid view type")

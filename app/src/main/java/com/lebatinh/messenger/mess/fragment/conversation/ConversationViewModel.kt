@@ -5,6 +5,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.lebatinh.messenger.notification.NotiData
 import com.lebatinh.messenger.notification.NotiHelper
 import com.lebatinh.messenger.other.MessageType
@@ -12,6 +14,7 @@ import com.lebatinh.messenger.other.NotificationType
 import com.lebatinh.messenger.other.ReturnResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -25,8 +28,7 @@ class ConversationViewModel @Inject constructor(
     private val _conversationResult = MutableLiveData<ReturnResult<Conversation>?>()
     val conversationResult: LiveData<ReturnResult<Conversation>?> get() = _conversationResult
 
-    private val _listConversationResult = MutableLiveData<ReturnResult<List<Conversation>>?>()
-    val listConversationResult: LiveData<ReturnResult<List<Conversation>>?> get() = _listConversationResult
+    private var currentConversationsFlow: Flow<PagingData<Conversation>>? = null
 
     private val _unitResult = MutableLiveData<ReturnResult<Unit>?>()
     val unitResult: LiveData<ReturnResult<Unit>?> get() = _unitResult
@@ -79,12 +81,19 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
-    fun getConversationsByUserId(currentUID: String, isGroup: Boolean? = null) {
-        viewModelScope.launch {
-            _listConversationResult.postValue(ReturnResult.Loading)
-            val result = useCase.getConversationsByUserId(currentUID, isGroup)
-            _listConversationResult.postValue(result)
+    fun getConversationsByUserId(
+        currentUID: String,
+        isGroup: Boolean? = null
+    ): Flow<PagingData<Conversation>> {
+        val lastResult = currentConversationsFlow
+        if (lastResult != null) {
+            return lastResult
         }
+
+        val newResult = useCase.getConversationsPagingFlow(currentUID, isGroup)
+            .cachedIn(viewModelScope)
+        currentConversationsFlow = newResult
+        return newResult
     }
 
     fun sendMessage(
@@ -190,7 +199,6 @@ class ConversationViewModel @Inject constructor(
     fun resetResult() {
         _conversationResult.postValue(null)
         _unitResult.postValue(null)
-        _listConversationResult.postValue(null)
         _listMessageResult.postValue(null)
     }
 }

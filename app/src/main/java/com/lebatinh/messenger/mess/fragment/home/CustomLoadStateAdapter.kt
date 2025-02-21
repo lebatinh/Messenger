@@ -8,9 +8,9 @@ import androidx.paging.LoadStateAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.lebatinh.messenger.databinding.LoadingStateBinding
 
-class UserLoadStateAdapter(
+class CustomLoadStateAdapter(
     private val retry: () -> Unit
-) : LoadStateAdapter<UserLoadStateAdapter.LoadStateViewHolder>() {
+) : LoadStateAdapter<CustomLoadStateAdapter.LoadStateViewHolder>() {
 
     override fun onBindViewHolder(holder: LoadStateViewHolder, loadState: LoadState) {
         holder.bind(loadState)

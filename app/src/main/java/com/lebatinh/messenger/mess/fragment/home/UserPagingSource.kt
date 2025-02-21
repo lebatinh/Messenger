@@ -90,7 +90,7 @@ class UserPagingSource(
 
             LoadResult.Page(
                 data = filteredResults,
-                prevKey = null, // Only support forward pagination
+                prevKey = null,
                 nextKey = if (filteredResults.size < PAGE_SIZE) null else lastDocument
             )
 

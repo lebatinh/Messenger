@@ -2,12 +2,12 @@ package com.lebatinh.messenger.mess.fragment.conversation
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.lebatinh.messenger.databinding.ConversationItemBinding
 import com.lebatinh.messenger.helper.TimeHelper
-import com.lebatinh.messenger.mess.fragment.ItemDiffCallback
 import com.lebatinh.messenger.other.MessageType
 import com.lebatinh.messenger.user.User
 import kotlinx.coroutines.CoroutineScope
@@ -15,24 +15,40 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ConversationAdapter(
-    private val items: MutableList<Conversation>,
     private val currentUserId: String,
     private val searchUserById: suspend (String) -> User?,
     private val onClickItem: (Conversation) -> Unit,
     private val onLongClickItem: (Conversation) -> Unit
-) :
-    RecyclerView.Adapter<ConversationAdapter.ConversationViewHolder>() {
+) : PagingDataAdapter<Conversation, ConversationAdapter.ConversationViewHolder>(
+    CONVERSATION_COMPARATOR
+) {
+
+    companion object {
+        private val CONVERSATION_COMPARATOR = object : DiffUtil.ItemCallback<Conversation>() {
+            override fun areItemsTheSame(oldItem: Conversation, newItem: Conversation): Boolean {
+                return oldItem.conversationId == newItem.conversationId
+            }
+
+            override fun areContentsTheSame(oldItem: Conversation, newItem: Conversation): Boolean {
+                return oldItem == newItem
+            }
+        }
+    }
 
     inner class ConversationViewHolder(private val binding: ConversationItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         init {
             binding.root.setOnClickListener {
-                onClickItem(items[absoluteAdapterPosition])
+                getItem(absoluteAdapterPosition)?.let { conversation ->
+                    onClickItem(conversation)
+                }
             }
 
             binding.root.setOnLongClickListener {
-                onLongClickItem(items[absoluteAdapterPosition])
+                getItem(absoluteAdapterPosition)?.let { conversation ->
+                    onLongClickItem(conversation)
+                }
                 true
             }
         }
@@ -104,23 +120,7 @@ class ConversationAdapter(
         return ConversationViewHolder(binding)
     }
 
-    override fun getItemCount(): Int = items.size
-
     override fun onBindViewHolder(holder: ConversationViewHolder, position: Int) {
-        holder.bind(items[position])
-    }
-
-    fun updateList(newList: List<Conversation>) {
-        val diffCallback = ItemDiffCallback(
-            oldList = items,
-            newList = newList,
-            areItemsTheSame = { oldItem, newItem -> oldItem.conversationId == newItem.conversationId },
-            areContentsTheSame = { oldItem, newItem -> oldItem == newItem }
-        )
-        val diffResult = DiffUtil.calculateDiff(diffCallback)
-
-        items.clear()
-        items.addAll(newList)
-        diffResult.dispatchUpdatesTo(this)
+        getItem(position)?.let { holder.bind(it) }
     }
 }

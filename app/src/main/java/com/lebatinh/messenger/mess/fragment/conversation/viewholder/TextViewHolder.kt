@@ -44,7 +44,7 @@ class TextViewHolder(
         }
     }
 
-    override fun bind(item: Message, position: Int, items: MutableList<Message>) {
+    override fun bind(item: Message, position: Int, items: List<Message>) {
         messages = items
         val isCurrentId = item.senderId == currentUserId
         setupMessageLayout(

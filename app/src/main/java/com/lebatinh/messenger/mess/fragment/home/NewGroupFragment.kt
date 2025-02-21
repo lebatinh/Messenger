@@ -136,8 +136,8 @@ class NewGroupFragment : Fragment(), MenuProvider {
         binding.rcvNewGroup.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@NewGroupFragment.userAdapter.withLoadStateHeaderAndFooter(
-                header = UserLoadStateAdapter { userAdapter.retry() },
-                footer = UserLoadStateAdapter { userAdapter.retry() }
+                header = CustomLoadStateAdapter { userAdapter.retry() },
+                footer = CustomLoadStateAdapter { userAdapter.retry() }
             )
         }
 

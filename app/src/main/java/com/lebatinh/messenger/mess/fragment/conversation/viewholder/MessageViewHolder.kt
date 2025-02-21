@@ -19,7 +19,10 @@ abstract class MessageViewHolder(
     protected val currentUserId: String,
     protected val searchUserById: suspend (String) -> User?
 ) : RecyclerView.ViewHolder(itemView) {
-    abstract fun bind(item: Message, position: Int, items: MutableList<Message>)
+    abstract fun bind(item: Message, position: Int, items: List<Message>)
+
+    open fun onRecycled() {}
+    open fun onDetachedFromWindow() {}
 
     protected fun setupMessageLayout(
         messageItem: MotionLayout,
