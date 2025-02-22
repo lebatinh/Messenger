@@ -8,7 +8,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="@id/ctlMessage"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/ctlMessage"
             app:layout_constraintTop_toBottomOf="@id/ctlMessage" />
         <Constraint
             android:id="@+id/tvTimeSend"
@@ -27,7 +28,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="visible"
-            app:layout_constraintEnd_toEndOf="@id/ctlMessage"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/ctlMessage"
             app:layout_constraintTop_toBottomOf="@id/ctlMessage" />
         <Constraint
             android:id="@id/tvTimeSend"

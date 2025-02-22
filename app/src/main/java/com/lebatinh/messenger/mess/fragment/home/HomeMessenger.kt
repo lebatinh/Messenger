@@ -77,12 +77,32 @@ class HomeMessenger : Fragment(), MenuProvider {
         observeConversations()
     }
 
+    override fun onResume() {
+        super.onResume()
+        refreshConversations()
+    }
+
+    private fun refreshConversations() {
+        conversationViewModel.refresh()
+        observeConversations()
+    }
+
     private fun observeConversations() {
         currentUID?.let { uid ->
+            // Observe paging data
             viewLifecycleOwner.lifecycleScope.launch {
                 conversationViewModel.getConversationsByUserId(uid)
                     .collectLatest { pagingData ->
                         conversationAdapter.submitData(pagingData)
+                    }
+            }
+
+            // Observe realtime updates
+            viewLifecycleOwner.lifecycleScope.launch {
+                conversationViewModel.realtimeConversations
+                    .collectLatest {
+                        // Refresh the adapter when new data arrives
+                        conversationAdapter.refresh()
                     }
             }
         }

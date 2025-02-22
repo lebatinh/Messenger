@@ -55,9 +55,9 @@
             android:layout_height="wrap_content"
             android:padding="@dimen/_3sdp"
             android:visibility="gone"
-            app:layout_constraintBottom_toTopOf="@+id/pvMessage"
+            app:layout_constraintBottom_toTopOf="@+id/ctlMessage"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="@id/pvMessage"
+            app:layout_constraintStart_toStartOf="@id/ctlMessage"
             app:layout_constraintTop_toTopOf="@+id/cvAvatar" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -98,8 +98,9 @@
             android:layout_height="wrap_content"
             android:padding="@dimen/_3sdp"
             android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="@id/pvMessage"
-            app:layout_constraintTop_toBottomOf="@id/pvMessage" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/ctlMessage"
+            app:layout_constraintTop_toBottomOf="@id/ctlMessage"  />
 
     </androidx.constraintlayout.motion.widget.MotionLayout>
 

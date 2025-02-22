@@ -8,6 +8,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.lebatinh.messenger.Key_Password.COLLECTION_PATH_CONVERSATION
 import com.lebatinh.messenger.Key_Password.COLLECTION_PATH_MESSAGE
 import com.lebatinh.messenger.Key_Password.PAGE_SIZE
@@ -121,6 +122,8 @@ class ConversationRepository @Inject constructor(
      * @param isGroup: Nếu true, chỉ lấy các nhóm;
      * nếu false, chỉ lấy các cuộc trò chuyện cá nhân; nếu null, lấy tất cả
      */
+    private var currentPagingSource: ConversationPagingSource? = null
+
     fun getConversationsPagingFlow(
         currentUID: String,
         isGroup: Boolean?
@@ -132,9 +135,39 @@ class ConversationRepository @Inject constructor(
                 initialLoadSize = PAGE_SIZE
             ),
             pagingSourceFactory = {
-                ConversationPagingSource(firestore, currentUID, isGroup)
+                ConversationPagingSource(firestore, currentUID, isGroup).also {
+                    currentPagingSource = it
+                }
             }
         ).flow
+    }
+    // Add a method to listen for real-time updates outside of paging
+    fun getRealtimeConversations(
+        currentUID: String,
+        isGroup: Boolean? = null,
+        onUpdate: (List<Conversation>) -> Unit
+    ): ListenerRegistration {
+        val query = firestore.collection(COLLECTION_PATH_CONVERSATION)
+            .whereArrayContains("listIdChatPerson", currentUID)
+
+        val filteredQuery = when (isGroup) {
+            true -> query.whereEqualTo("group", true)
+            false -> query.whereEqualTo("group", false)
+            else -> query
+        }
+
+        return filteredQuery.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                return@addSnapshotListener
+            }
+
+            snapshot?.let { querySnapshot ->
+                val conversations = querySnapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Conversation::class.java)
+                }
+                onUpdate(conversations)
+            }
+        }
     }
 
     suspend fun sendMessage(

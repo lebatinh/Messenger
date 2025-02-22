@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.google.firebase.firestore.ListenerRegistration
 import com.lebatinh.messenger.notification.NotiData
 import com.lebatinh.messenger.notification.NotiHelper
 import com.lebatinh.messenger.other.MessageType
@@ -15,6 +16,9 @@ import com.lebatinh.messenger.other.ReturnResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -29,6 +33,11 @@ class ConversationViewModel @Inject constructor(
     val conversationResult: LiveData<ReturnResult<Conversation>?> get() = _conversationResult
 
     private var currentConversationsFlow: Flow<PagingData<Conversation>>? = null
+
+    private var listenerRegistration: ListenerRegistration? = null
+
+    private val _realtimeConversations = MutableStateFlow<List<Conversation>>(emptyList())
+    val realtimeConversations: StateFlow<List<Conversation>> = _realtimeConversations.asStateFlow()
 
     private val _unitResult = MutableLiveData<ReturnResult<Unit>?>()
     val unitResult: LiveData<ReturnResult<Unit>?> get() = _unitResult
@@ -93,7 +102,25 @@ class ConversationViewModel @Inject constructor(
         val newResult = useCase.getConversationsPagingFlow(currentUID, isGroup)
             .cachedIn(viewModelScope)
         currentConversationsFlow = newResult
+
+        // Set up realtime listener
+        listenerRegistration?.remove()
+        listenerRegistration = useCase.getRealtimeConversations(
+            currentUID = currentUID,
+            isGroup = isGroup
+        ) { conversations ->
+            viewModelScope.launch {
+                _realtimeConversations.emit(conversations)
+            }
+        }
+
         return newResult
+    }
+
+    fun refresh() {
+        currentConversationsFlow = null
+        listenerRegistration?.remove()
+        listenerRegistration = null
     }
 
     fun sendMessage(
@@ -152,6 +179,7 @@ class ConversationViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         messageJob?.cancel()
+        listenerRegistration?.remove()
     }
 
     fun sendMessageNotification(

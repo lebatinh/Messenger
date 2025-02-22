@@ -4,8 +4,10 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.lebatinh.messenger.Key_Password.COLLECTION_PATH_CONVERSATION
 import com.lebatinh.messenger.Key_Password.PAGE_SIZE
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.tasks.await
 
 class ConversationPagingSource(
@@ -14,6 +16,9 @@ class ConversationPagingSource(
     private val isGroup: Boolean? = null
 ) : PagingSource<DocumentSnapshot, Conversation>() {
 
+    private var listenerRegistration: ListenerRegistration? = null
+    private val _realtimeUpdates = MutableSharedFlow<Unit>(replay = 1)
+
     override fun getRefreshKey(state: PagingState<DocumentSnapshot, Conversation>): DocumentSnapshot? {
         return null
     }
@@ -21,23 +26,28 @@ class ConversationPagingSource(
     override suspend fun load(params: LoadParams<DocumentSnapshot>): LoadResult<DocumentSnapshot, Conversation> {
         return try {
             // Tạo query cơ bản
-            var query = firestore.collection(COLLECTION_PATH_CONVERSATION)
+            val query = firestore.collection(COLLECTION_PATH_CONVERSATION)
                 .whereArrayContains("listIdChatPerson", currentUID)
-//                .orderBy("lastMessage.timeSend", Query.Direction.DESCENDING)
                 .limit(PAGE_SIZE.toLong())
 
             // Thêm điều kiện group nếu có
-            query = when (isGroup) {
+            val filteredQuery = when (isGroup) {
                 true -> query.whereEqualTo("group", true)
                 false -> query.whereEqualTo("group", false)
                 else -> query
             }
 
+            if (listenerRegistration == null) {
+                listenerRegistration = filteredQuery.addSnapshotListener { _, _ ->
+                    _realtimeUpdates.tryEmit(Unit)
+                }
+            }
+
             // Lấy snapshot
             val currentPage = if (params.key != null) {
-                query.startAfter(params.key!!).get().await()
+                filteredQuery.startAfter(params.key!!).get().await()
             } else {
-                query.get().await()
+                filteredQuery.get().await()
             }
 
             // Chuyển đổi documents thành conversations

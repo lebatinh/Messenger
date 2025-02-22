@@ -30,17 +30,6 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:listitem="@layout/message_text_item" />
 
-            <ImageView
-                android:id="@+id/btnScrollBottom"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:contentDescription="@string/scroll_to_bottom"
-                android:src="@drawable/arrow_down"
-                android:visibility="gone"
-                android:layout_margin="@dimen/_16sdp"
-                app:layout_constraintBottom_toTopOf="@id/ctlToolMessage"
-                app:layout_constraintEnd_toEndOf="parent" />
-
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/ctlToolMessage"
                 android:layout_width="match_parent"
